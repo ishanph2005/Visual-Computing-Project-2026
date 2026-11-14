@@ -1,0 +1,59 @@
+# Python bytecode and caching
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Virtual environments
+venv/
+*env*/
+segformer_env/
+dav2_env/
+.env
+
+# Model checkpoints and large weight files (must not exceed GitHub 100MB limit)
+*.pth
+*.pt
+*.bin
+*.h5
+*.onnx
+checkpoints/
+metric_depth/checkpoints/
+mit-b2/*.bin
+mit-b2/*.h5
+mit-b2/.cache/
+
+# Experiment outputs, run logs, and predictions
+runs/
+work_dirs/
+exp/
+vis_*/
+preds*/
+outputs/
+pointclouds/
+training_curves.png
+history.json
+*.log
+
+# Generated numpy arrays and evaluation results (avoid committing bulky generated arrays)
+*.npz
+*.npy
+*.csv
+
+# Heavy dataset imagery (keep ground-truth labels and text split definitions tracked)
+LunarSeg/image/
+LunarSeg/depth/
+!LunarSeg/label/
+!LunarSeg/label_color/
+!LunarSeg/*.txt
+
+# Operating system and editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

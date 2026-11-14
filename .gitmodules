@@ -1,0 +1,12 @@
+[submodule "Depth-Anything-V2"]
+	path = Depth-Anything-V2
+	url = https://github.com/DepthAnything/Depth-Anything-V2.git
+	ignore = untracked
+[submodule "SegFormer"]
+	path = SegFormer
+	url = https://github.com/NVlabs/SegFormer.git
+	ignore = untracked
+[submodule "LuSeg"]
+	path = LuSeg
+	url = https://github.com/nubot-nudt/LuSeg.git
+	ignore = untracked
