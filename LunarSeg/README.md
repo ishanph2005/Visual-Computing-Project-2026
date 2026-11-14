@@ -92,22 +92,31 @@ pip install numpy opencv-python
 
 All dataset utilities are centralized in `scripts/` at the repository root. Commands below can be executed from the project root or from `LunarSeg/`:
 
-### 1. `split_dataset.py` - Non-Destructive Dataset Splitting via Links
-Exposes images from a raw/flat directory into `train/`, `test/`, and `validation/` subdirectories according to `train.txt`, `test.txt`, and `validation.txt`. Uses **symbolic links** by default (or hard links with `--hardlink`), requiring no extra disk space.
+### 1. `split_dataset.py` - Multipurpose Dataset Splitter
+Exposes or copies/moves images from a raw/flat directory into `train/`, `test/`, and `validation/` subdirectories according to `train.txt`, `test.txt`, and `validation.txt`. Supports multiple transfer modes: `symlink` (default), `hardlink`, `copy`, and `move`.
 
 **Usage (from project root):**
 ```bash
-# Link downloaded flat image folder into train/, test/, and validation/ subdirectories
+# Symlink mode (default, saves disk space):
 python3 scripts/split_dataset.py /path/to/raw_downloaded_images --output-dir LunarSeg/image --ext .png
+
+# Hardlink mode:
+python3 scripts/split_dataset.py /path/to/raw_downloaded_images --output-dir LunarSeg/image --hardlink
+
+# Physical copy mode:
+python3 scripts/split_dataset.py /path/to/raw_downloaded_images --output-dir LunarSeg/image --copy
 
 # Organize flat label/ directory into train/, test/, validation/ subfolders inside a new label_split directory:
 python3 scripts/split_dataset.py LunarSeg/label --output-dir LunarSeg/label_split --ext .png
 ```
 
-**Arguments:**
+**Key Arguments:**
 - `input_dir`: Directory containing unsorted input files (searched recursively).
-- `--hardlink`: Use hard links instead of symlinks (requires source and destination to be on the same filesystem).
+- `--output-dir`: Output destination where `train/`, `validation/`, and `test/` subfolders are created.
+- `--mode {symlink,hardlink,copy,move}` or shortcut flags (`--symlink`, `--hardlink`, `--copy`, `--move`).
 - `--ext`: Extensions to match (default: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.webp`, `.tif`, `.tiff`).
+- `--all-files`: Consider all file types, ignoring extension filter.
+- `--exact`: Require exact name/stem matching instead of substring matching.
 
 ---
 
@@ -152,6 +161,6 @@ python3 scripts/normalize_npz.py outputs/depth_rel outputs/normalized_depth_npz 
 
 | Script | Purpose | Key Inputs | Key Outputs |
 | :--- | :--- | :--- | :--- |
-| **`split_dataset.py`** | Non-destructive split organization via symlinks / hardlinks | Raw data folder, `train.txt`, `test.txt`, `validation.txt` | `train/`, `test/`, `validation/` link directories |
+| **`split_dataset.py`** | Multipurpose dataset partitioning (symlink, hardlink, copy, move) | Raw data folder, `train.txt`, `test.txt`, `validation.txt` | `train/`, `test/`, `validation/` split directories |
 | **`png_to_npz.py`** | Converts 8/16-bit depth PNGs to float32 $[0, 1]$ `.npz` arrays | Depth PNG directory | Normalized `.npz` files (`depth` key) |
 | **`normalize_npz.py`** | Min-max normalizes predicted `.npz` depth maps to $[0, 1]$ | Raw `.npz` depth directory | Normalized `.npz` depth maps |

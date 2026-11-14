@@ -18,8 +18,8 @@ The project is structured to keep third-party research frameworks unmodified as 
 │   ├── compare_metric_depth.py     # Compares predicted depth against LunarSeg ground truth
 │   ├── train_segformer_hf.py       # Hugging Face SegFormer pipeline (RGB & RGB-D, train/eval/analyze/plot)
 │   ├── plot_results.py             # Visualizes loss and per-class IoU curves from history.json
-│   ├── split_dataset.py            # Non-destructive dataset splitter via symlinks/hardlinks
-│   ├── split_images.py             # Image file splitter based on substring matching
+│   ├── split_dataset.py            # Multipurpose dataset splitter (symlink, hardlink, copy, move)
+│   ├── split_images.py             # Backward-compatible wrapper for split_dataset.py
 │   ├── png_to_npz.py               # Depth PNG to normalized float32 [0, 1] .npz converter
 │   ├── normalize_npz.py            # Min-max normalizer for predicted depth maps
 │   ├── npy_png_converter.py        # Converts raw depth .npy arrays to grayscale PNGs
@@ -166,17 +166,25 @@ All commands below should be executed from the **repository root directory**.
 
 ### Phase 1: Dataset Partitioning & Preprocessing
 
-#### 1. Split Raw Images into Train / Validation / Test (Symlinks)
-Creates symbolic links into `train/`, `validation/`, and `test/` subfolders according to `train.txt`, `test.txt`, and `validation.txt` without duplicating disk storage:
+#### 1. Multipurpose Dataset Splitter (`split_dataset.py`)
+Partitions images and dataset files into `train/`, `validation/`, and `test/` subfolders according to `train.txt`, `test.txt`, and `validation.txt`. Supports multiple transfer modes (`symlink`, `hardlink`, `copy`, `move`):
+
 ```bash
+# Non-destructive splitting via symlinks (default, saves disk space):
 python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --ext .png
+
+# Hardlink mode (zero extra disk space on same filesystem):
+python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --hardlink
+
+# Physical copy mode (creates independent duplicate copies):
+python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --copy
+
+# Move mode (moves original files directly into split folders):
+python3 scripts/split_dataset.py /path/to/downloaded_images LunarSeg LunarSeg/image --move
 ```
 
-#### 2. Alternative Splitter via Substring Matching
-Copies or moves image files by substring matching against split text files:
-```bash
-python3 scripts/split_images.py /path/to/raw_images LunarSeg LunarSeg/image --recursive
-```
+> [!NOTE]
+> `scripts/split_images.py` is maintained as a backward-compatible wrapper that automatically forwards arguments to `split_dataset.py` with copy/move semantics.
 
 #### 3. Convert Depth PNGs to Float32 `[0, 1]` `.npz` Archives
 Normalizes 8-bit or 16-bit depth PNGs into compressed single-channel `.npz` arrays:
@@ -356,8 +364,8 @@ python3 scripts/plot_results.py \
 | **`compare_metric_depth.py`** | `LunarSeg` | Compares depth predictions vs ground truth | AbsRel, RMSE, $\delta_1$, Spearman stats, `.csv` |
 | **`train_segformer_hf.py`** | `SegFormer/mit-b2`, `LunarSeg` | SegFormer RGB/RGB-D fine-tuning, eval & corruptions | `best/`, `last/`, `history.json`, `_mask.png` |
 | **`plot_results.py`** | Training runs | Plots training/validation loss and per-class IoU | `training_curves.png` |
-| **`split_dataset.py`** | `LunarSeg` | Non-destructive split linking (symlinks/hardlinks) | `train/`, `validation/`, `test/` directories |
-| **`split_images.py`** | `LunarSeg` | Splits files by substring matching | `train/`, `validation/`, `test/` directories |
+| **`split_dataset.py`** | `LunarSeg` | Multipurpose dataset splitter (symlink/hardlink/copy/move) | `train/`, `validation/`, `test/` directories |
+| **`split_images.py`** | `LunarSeg` | Backward-compatible wrapper forwarding to `split_dataset.py` | `train/`, `validation/`, `test/` directories |
 | **`png_to_npz.py`** | `LunarSeg` | Converts depth PNGs to normalized float32 `.npz` | `.npz` archives with `depth` array |
 | **`normalize_npz.py`** | `Depth-Anything-V2` | Min-max normalizes `.npz` depth arrays to `[0, 1]` | Normalized `.npz` files |
 | **`npy_png_converter.py`** | Generic | Converts depth `.npy` arrays to 8-bit grayscale PNGs | Normalized grayscale `.png` images |
