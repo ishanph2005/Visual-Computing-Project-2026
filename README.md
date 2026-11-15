@@ -184,7 +184,6 @@ visual-computing-project/
 2. **Download model checkpoints:** Download the respective `checkpoints.zip` files from the `U-Net/` and `SegFormer/` directories.
 
 3. **Extract checkpoints:** Extract each ZIP archive and place its contents under the corresponding checkpoint directory, ensuring that the directory structure is preserved.
-```
 
 **Note:** The dataset archives must be extracted into the current working directory, whereas model checkpoints must be extracted into their respective directories under `checkpoints/`. Ensure that the extracted files are accessible at the paths expected by the project scripts.
 
