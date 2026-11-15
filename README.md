@@ -2,7 +2,7 @@
 
 This repository implements an end-to-end multi-modal vision pipeline for lunar hazard detection (positive obstacles: **rocks and boulders**; negative obstacles: **craters**). It integrates **Depth Anything V2 (DAv2)** for monocular relative and metric depth estimation with two semantic segmentation architectures — **SegFormer** (transformer-based) and **UNet** (CNN-based, ResNet-34 encoder) — on the **LunarSeg** benchmark dataset.
 
-The project is structured to keep third-party research frameworks unmodified as **Git submodules**, while all custom fine-tuning, inference, benchmarking, and dataset utilities are organized in the centralized **`scripts/`** directory (with `scripts/segformer/` and `scripts/unet/` subdirectories for each segmentation pipeline). The standalone **`LunarHazardSeg/`** directory contains the original UNet training and evaluation codebase.
+The project is structured to keep third-party research frameworks unmodified as **Git submodules**, while all custom fine-tuning, inference, benchmarking, and dataset utilities are organized in the centralized **`scripts/`** directory (with `scripts/segformer/` and `scripts/unet/` subdirectories for each segmentation pipeline).
 
 ---
 
@@ -28,13 +28,11 @@ The project is structured to keep third-party research frameworks unmodified as 
 │   ├── train_segformer_hf.py       # Forwarder → scripts/segformer/train_segformer_hf.py
 │   ├── plot_results.py             # Forwarder → scripts/segformer/plot_results.py
 │   ├── split_dataset.py            # Multipurpose dataset splitter (symlink, hardlink, copy, move)
+│   ├── inspect_dataset.py          # Dataset diagnostic: class ID distributions and sample shapes
+│   ├── visualize_sample.py         # 4-panel multimodal visualization (RGB, ID, color, depth)
 │   ├── png_to_npz.py               # Depth PNG to normalized float32 [0, 1] .npz converter
 │   ├── normalize_npz.py            # Min-max normalizer for predicted depth maps
 │   └── npy_png_converter.py        # Converts raw depth .npy arrays to grayscale PNGs
-├── LunarHazardSeg/                  # Standalone UNet training & evaluation codebase
-│   ├── src/                        # Core modules (dataset, train, evaluate, metrics, etc.)
-│   ├── checkpoints/                # Trained UNet weights (not tracked by Git)
-│   └── README.md                   # LunarHazardSeg-specific documentation
 ├── Depth-Anything-V2/              # Submodule: Upstream Depth Anything V2 repository
 │   ├── checkpoints/                # Relative depth pretrained weights (depth_anything_v2_vitl.pth)
 │   └── metric_depth/               # Metric depth estimation module & checkpoints
@@ -402,7 +400,7 @@ python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
     --n_warmup 5 --n_iter 50
 ```
 
-> **Note:** UNet checkpoints are saved under `LunarHazardSeg/checkpoints/<run_name>/best.pth` and are **not tracked by Git**. Train locally or download them separately.
+> **Note:** UNet checkpoints are saved under `runs/unet/<run_name>/best.pth` (or `checkpoints/<run_name>/best.pth`) and are **not tracked by Git**. Train locally or download them separately.
 
 ---
 
@@ -417,10 +415,12 @@ python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
 | **`train_segformer_hf.py`** | `SegFormer/mit-b2`, `LunarSeg` | SegFormer RGB/RGB-D fine-tuning, eval & corruptions | `best/`, `last/`, `history.json`, `_mask.png` |
 | **`plot_results.py`** | Training runs | Plots training/validation loss and per-class IoU | `training_curves.png` |
 | **`split_dataset.py`** | `LunarSeg` | Multipurpose dataset splitter (symlink/hardlink/copy/move) | `train/`, `validation/`, `test/` directories |
+| **`inspect_dataset.py`** | `LunarSeg` | Dataset diagnostic: class ID distributions & modality checks | Diagnostic report in terminal |
+| **`visualize_sample.py`** | `LunarSeg` | 4-panel multimodal visualization (RGB, ID, color, depth) | `results/dataset_sample.png` |
 | **`png_to_npz.py`** | `LunarSeg` | Converts depth PNGs to normalized float32 `.npz` | `.npz` archives with `depth` array |
 | **`normalize_npz.py`** | `Depth-Anything-V2` | Min-max normalizes `.npz` depth arrays to `[0, 1]` | Normalized `.npz` files |
 | **`npy_png_converter.py`** | Generic | Converts depth `.npy` arrays to 8-bit grayscale PNGs | Normalized grayscale `.png` images |
-| **`unet/train_unet.py`** | `LunarHazardSeg`, `LunarSeg` | UNet RGB/RGB-D/RGB-PD training with ResNet-34 encoder | `best.pth`, `history.json` |
-| **`unet/evaluate_unet.py`** | `LunarHazardSeg`, `LunarSeg` | UNet evaluation: mIoU, per-class metrics, visual comparisons | JSON metrics, comparison PNGs |
-| **`unet/compare_unet.py`** | `LunarHazardSeg`, `LunarSeg` | Multi-run side-by-side UNet comparison | Comparison table, overlay images |
-| **`unet/stress_unet.py`** | `LunarHazardSeg` | Inference latency benchmarking across UNet checkpoints | Throughput stats (ms/frame) |
+| **`unet/train_unet.py`** | SMP, `LunarSeg` | UNet RGB/RGB-D/RGB-PD training with ResNet-34 encoder | `best.pth`, `history.json` |
+| **`unet/evaluate_unet.py`** | SMP, `LunarSeg` | UNet evaluation: mIoU, per-class metrics, visual comparisons | JSON metrics, comparison PNGs |
+| **`unet/compare_unet.py`** | SMP, `LunarSeg` | Multi-run side-by-side UNet comparison | Comparison table, overlay images |
+| **`unet/stress_unet.py`** | SMP | Inference latency benchmarking across UNet checkpoints | Throughput stats (ms/frame) |

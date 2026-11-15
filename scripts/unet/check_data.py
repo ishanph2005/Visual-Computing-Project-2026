@@ -1,7 +1,7 @@
-"""Phase 0: verify LunarSeg dataset before training.
+"""Verify LunarSeg dataset before training.
 
 Usage:
-    python -m src.check_data [--root LunarSeg]
+    python scripts/unet/check_data.py [--root LunarSeg]
 Prints split sizes, checks image/depth/label file presence (supporting both flat and split folders),
 and summarizes class distributions.
 """

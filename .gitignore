@@ -33,6 +33,7 @@ exp/
 vis_*/
 preds*/
 outputs/
+results/
 pointclouds/
 training_curves.png
 history.json
@@ -57,11 +58,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
-
-# LunarHazardSeg: exclude checkpoints, venv, and generated outputs
-LunarHazardSeg/checkpoints/
-LunarHazardSeg/.venv/
-LunarHazardSeg/runs/
 
 # Depth model results and finetuned outputs (large generated files)
 depthmodel_results/

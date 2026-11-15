@@ -13,7 +13,7 @@ Usage:
     python3 scripts/unet/evaluate_unet.py --name unet_r34_rgb --split test
 
     # Or specify direct path to checkpoint folder:
-    python3 scripts/unet/evaluate_unet.py --ckpt LunarHazardSeg/checkpoints/unet_r34_rgb --split test
+    python3 scripts/unet/evaluate_unet.py --ckpt checkpoints/unet_r34_rgb --split test
 """
 import argparse
 import json
@@ -44,11 +44,10 @@ def find_checkpoint_dir(target_name):
         return target_path
 
     candidates = [
-        Path("runs/unet") / target_name,
         Path("checkpoints") / target_name,
-        Path("LunarHazardSeg/checkpoints") / target_name,
+        Path("runs/unet") / target_name,
+        SCRIPT_DIR.parent.parent / "checkpoints" / target_name,
         SCRIPT_DIR.parent.parent / "runs" / "unet" / target_name,
-        SCRIPT_DIR.parent.parent / "LunarHazardSeg" / "checkpoints" / target_name,
     ]
     for c in candidates:
         if c.is_dir() and (c / "config.json").exists():

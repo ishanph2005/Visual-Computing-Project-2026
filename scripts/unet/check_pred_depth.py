@@ -1,6 +1,7 @@
-"""Phase 3: inspect Depth Anything predictions and score them against true depth.
+"""Inspect Depth Anything predictions and score them against true depth.
 
-    python -m src.check_pred_depth --pred_dir data_pred
+Usage:
+    python scripts/unet/check_pred_depth.py --pred_dir outputs/dav2_lunar_preds
 
 1. Prints what is inside one .npz (keys, shape, dtype, range) and checks every
    image in the dataset has a prediction.
@@ -15,11 +16,16 @@ import argparse, json, os, random
 import numpy as np
 from PIL import Image
 
-from src.dataset import read_split, load_pred, gt_depth_to_inverse, pred_depth_to_disparity
+import sys
+from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from dataset import read_split, load_pred, gt_depth_to_inverse, pred_depth_to_disparity
 
 p = argparse.ArgumentParser()
-p.add_argument("--root", default="data")
-p.add_argument("--pred_dir", default="data_pred")
+p.add_argument("--root", default="LunarSeg")
+p.add_argument("--pred_dir", default="outputs/dav2_lunar_preds")
 p.add_argument("--n", type=int, default=400, help="images to score")
 p.add_argument("--invert", action="store_true", help="files hold depth (far = large): score 1/depth")
 p.add_argument("--split", default=None, choices=["train", "validation", "test"], help="score only this split")
