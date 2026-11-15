@@ -1,8 +1,8 @@
 # Multi-Modal Lunar Terrain Hazard Segmentation & Depth Estimation
 
-This repository implements an end-to-end multi-modal vision pipeline for lunar hazard detection (positive obstacles: **rocks and boulders**; negative obstacles: **craters**). It integrates **Depth Anything V2 (DAv2)** for monocular relative and metric depth estimation with **SegFormer** for semantic segmentation on the **LunarSeg** benchmark dataset.
+This repository implements an end-to-end multi-modal vision pipeline for lunar hazard detection (positive obstacles: **rocks and boulders**; negative obstacles: **craters**). It integrates **Depth Anything V2 (DAv2)** for monocular relative and metric depth estimation with two semantic segmentation architectures — **SegFormer** (transformer-based) and **UNet** (CNN-based, ResNet-34 encoder) — on the **LunarSeg** benchmark dataset.
 
-The project is structured to keep third-party research frameworks unmodified as **Git submodules**, while all custom fine-tuning, inference, benchmarking, and dataset utilities are organized in the centralized **`scripts/`** directory.
+The project is structured to keep third-party research frameworks unmodified as **Git submodules**, while all custom fine-tuning, inference, benchmarking, and dataset utilities are organized in the centralized **`scripts/`** directory (with `scripts/segformer/` and `scripts/unet/` subdirectories for each segmentation pipeline). The standalone **`LunarHazardSeg/`** directory contains the original UNet training and evaluation codebase.
 
 ---
 
@@ -11,16 +11,30 @@ The project is structured to keep third-party research frameworks unmodified as 
 ```
 .
 ├── scripts/                         # Project-specific custom scripts & pipelines
+│   ├── segformer/                  # SegFormer-specific training, eval & plotting
+│   │   ├── train_segformer_hf.py  # Hugging Face SegFormer pipeline (RGB & RGB-D, train/eval/analyze/plot)
+│   │   └── plot_results.py        # Visualizes loss and per-class IoU curves from history.json
+│   ├── unet/                       # UNet-specific training, eval, comparison & latency
+│   │   ├── train_unet.py          # UNet ResNet-34 training (RGB / RGB-D / RGB-PD modes)
+│   │   ├── evaluate_unet.py      # Evaluation: mIoU, per-class metrics, visual comparisons
+│   │   ├── compare_unet.py       # Side-by-side comparison of multiple UNet runs
+│   │   ├── stress_unet.py        # Inference latency profiling across checkpoints
+│   │   ├── dataset.py            # LunarSeg dataset loader (auto-detects dataset root)
+│   │   └── metrics.py            # Confusion matrix and IoU computation utilities
 │   ├── run_dav2_raw.py             # DAv2 relative depth inference + raw .npz array export
 │   ├── finetune_lunar.py           # DAv2 metric head fine-tuning & evaluation on LunarSeg
 │   ├── inference_dav2.py           # Batched inference with fine-tuned DAv2 checkpoints
 │   ├── count_gflops.py             # FLOPs, GMACs, latency, and parameter profiler for DAv2
-│   ├── train_segformer_hf.py       # Hugging Face SegFormer pipeline (RGB & RGB-D, train/eval/analyze/plot)
-│   ├── plot_results.py             # Visualizes loss and per-class IoU curves from history.json
+│   ├── train_segformer_hf.py       # Forwarder → scripts/segformer/train_segformer_hf.py
+│   ├── plot_results.py             # Forwarder → scripts/segformer/plot_results.py
 │   ├── split_dataset.py            # Multipurpose dataset splitter (symlink, hardlink, copy, move)
 │   ├── png_to_npz.py               # Depth PNG to normalized float32 [0, 1] .npz converter
 │   ├── normalize_npz.py            # Min-max normalizer for predicted depth maps
 │   └── npy_png_converter.py        # Converts raw depth .npy arrays to grayscale PNGs
+├── LunarHazardSeg/                  # Standalone UNet training & evaluation codebase
+│   ├── src/                        # Core modules (dataset, train, evaluate, metrics, etc.)
+│   ├── checkpoints/                # Trained UNet weights (not tracked by Git)
+│   └── README.md                   # LunarHazardSeg-specific documentation
 ├── Depth-Anything-V2/              # Submodule: Upstream Depth Anything V2 repository
 │   ├── checkpoints/                # Relative depth pretrained weights (depth_anything_v2_vitl.pth)
 │   └── metric_depth/               # Metric depth estimation module & checkpoints
@@ -342,6 +356,56 @@ python3 scripts/plot_results.py \
 
 ---
 
+### Phase 4: Semantic Hazard Segmentation (UNet — ResNet-34 Encoder)
+
+The UNet pipeline uses `segmentation_models_pytorch` (SMP) with a ResNet-34 encoder. Scripts are in `scripts/unet/`. The dataset loader auto-detects `LunarSeg/` from the repo root, so no manual `--root` is needed if you run from the project directory.
+
+> **Dependencies:** `pip install segmentation-models-pytorch scipy opencv-python matplotlib`
+
+#### 1. RGB Mode Training (3-Channel)
+```bash
+python3 scripts/unet/train_unet.py --mode rgb --name unet_r34_rgb \
+    --epochs 30 --bs 4 --lr 1e-4
+```
+
+#### 2. Multi-Modal RGB + Ground-Truth Depth (4-Channel)
+```bash
+python3 scripts/unet/train_unet.py --mode rgbd --name unet_r34_rgbd \
+    --epochs 30 --bs 4 --lr 1e-4
+```
+
+#### 3. Multi-Modal RGB + Predicted Depth (4-Channel)
+Uses DAv2-predicted depth maps instead of ground truth:
+```bash
+python3 scripts/unet/train_unet.py --mode rgbpd --name unet_r34_rgbpd_ft \
+    --pred_depth_dir outputs/dav2_lunar_preds \
+    --epochs 30 --bs 4 --lr 1e-4
+```
+
+#### 4. Evaluation & Metrics
+Evaluates a trained checkpoint on a split. Computes mIoU, per-class IoU, precision, recall, and saves side-by-side visual comparisons:
+```bash
+python3 scripts/unet/evaluate_unet.py --name unet_r34_rgb --split test --n_vis 5
+```
+
+#### 5. Compare Multiple Runs
+Generates a side-by-side comparison table and overlay visualizations across checkpoints:
+```bash
+python3 scripts/unet/compare_unet.py --runs unet_r34_rgb unet_r34_rgbd unet_r34_rgbpd_ft \
+    --split test --n_vis 5
+```
+
+#### 6. Inference Latency Profiling
+Benchmarks throughput (ms/frame) across one or more checkpoints:
+```bash
+python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
+    --n_warmup 5 --n_iter 50
+```
+
+> **Note:** UNet checkpoints are saved under `LunarHazardSeg/checkpoints/<run_name>/best.pth` and are **not tracked by Git**. Train locally or download them separately.
+
+---
+
 ## 7. Summary Mapping of Custom Scripts vs. Submodules
 
 | Custom Script (`scripts/`) | Interacts With | Functionality | Primary Output |
@@ -356,3 +420,7 @@ python3 scripts/plot_results.py \
 | **`png_to_npz.py`** | `LunarSeg` | Converts depth PNGs to normalized float32 `.npz` | `.npz` archives with `depth` array |
 | **`normalize_npz.py`** | `Depth-Anything-V2` | Min-max normalizes `.npz` depth arrays to `[0, 1]` | Normalized `.npz` files |
 | **`npy_png_converter.py`** | Generic | Converts depth `.npy` arrays to 8-bit grayscale PNGs | Normalized grayscale `.png` images |
+| **`unet/train_unet.py`** | `LunarHazardSeg`, `LunarSeg` | UNet RGB/RGB-D/RGB-PD training with ResNet-34 encoder | `best.pth`, `history.json` |
+| **`unet/evaluate_unet.py`** | `LunarHazardSeg`, `LunarSeg` | UNet evaluation: mIoU, per-class metrics, visual comparisons | JSON metrics, comparison PNGs |
+| **`unet/compare_unet.py`** | `LunarHazardSeg`, `LunarSeg` | Multi-run side-by-side UNet comparison | Comparison table, overlay images |
+| **`unet/stress_unet.py`** | `LunarHazardSeg` | Inference latency benchmarking across UNet checkpoints | Throughput stats (ms/frame) |
