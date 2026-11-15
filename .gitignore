@@ -43,11 +43,11 @@ history.json
 *.npy
 *.csv
 
-# Heavy dataset imagery (keep ground-truth labels and text split definitions tracked)
+# Heavy dataset imagery (download from LuSeg; only split definition txt files are tracked)
 LunarSeg/image/
 LunarSeg/depth/
-!LunarSeg/label/
-!LunarSeg/label_color/
+LunarSeg/label/
+LunarSeg/label_color/
 !LunarSeg/*.txt
 
 # Operating system and editor artifacts

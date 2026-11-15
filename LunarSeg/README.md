@@ -8,12 +8,7 @@ This directory contains the dataset annotations, split definitions, and dataset 
 
 ## 1. Directory Status & Missing Files
 
-### A. Currently Present Components
-- **`label/`**: Contains 5,143 single-channel ground-truth annotation PNGs (grayscale class IDs: `0`, `1`, `2`) in a flat directory structure.
-- **`label_color/`**: Contains color-coded 3-channel RGB annotation masks organized into split subdirectories:
-  - `train/`: 3,085 masks
-  - `validation/`: 1,028 masks
-  - `test/`: 1,030 masks
+### A. What Is Included in This Repository
 - **Split Definitions (`.txt`)**:
   - `train.txt`: 3,085 sample identifiers
   - `validation.txt`: 1,028 sample identifiers
@@ -21,23 +16,24 @@ This directory contains the dataset annotations, split definitions, and dataset 
   - *Total: 5,143 samples*
 - **Centralized Scripts**: All dataset preparation and conversion utilities live in `../scripts/` (`split_dataset.py`, `png_to_npz.py`, `normalize_npz.py`).
 
----
+### B. Must-Download Components
 
-### B. Missing Pieces & How to Obtain Them
+The following modalities are **not present** in the repository and must be downloaded from the LuSeg dataset:
 
-The following modalities are **not currently present** in this directory:
-
-| Missing Component | Description | Expected Directory Path |
+| Component | Description | Expected Directory Path |
 | :--- | :--- | :--- |
 | **`image/`** | Photorealistic Lunar RGB images (`.png`) | `LunarSeg/image/{train,validation,test}/<name>.png` |
 | **`depth/`** | Ground-truth physical metric/relative depth PNGs | `LunarSeg/depth/{train,validation,test}/<name>.png` |
+| **`label/`** | 5,143 single-channel class ID masks (values 0, 1, 2) | `LunarSeg/label/{train,validation,test}/<name>.png` |
+| **`label_color/`** | Color-coded 3-channel RGB annotation masks | `LunarSeg/label_color/{train,validation,test}/<name>.png` |
 
 #### How to Download:
 1. **Source Repository:** The dataset is released by the NUDT Nubot research team as part of:
    > *LuSeg: Efficient Negative and Positive Obstacles Segmentation via Contrast-Driven Multi-Modal Feature Fusion on the Lunar Surface* (IROS).  
    > Official GitHub Repository: [https://github.com/nubot-nudt/LuSeg](https://github.com/nubot-nudt/LuSeg)
-2. **Download Links:** Access the official Google Drive links provided in the **Dataset** section of the [LuSeg GitHub repository](https://github.com/nubot-nudt/LuSeg) to download the compressed `image` and `depth` archives.
+2. **Download Links:** Access the official Google Drive links provided in the **Dataset** section of the [LuSeg GitHub repository](https://github.com/nubot-nudt/LuSeg) to download the compressed `image`, `depth`, `label`, and `label_color` archives.
 3. **Placing Downloaded Data:** Extract the archives into `LunarSeg/`. If the downloaded archives are flat folders, organize them into split folders using `split_dataset.py` (see Section 3).
+   > **Note:** `label_color/` from the LuSeg download already has `train/`, `validation/`, `test/` subdirectories. `label/` is flat and must be split with `split_dataset.py`.
 
 ---
 

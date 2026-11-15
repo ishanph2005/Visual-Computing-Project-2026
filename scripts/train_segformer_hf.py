@@ -56,8 +56,8 @@ Metric definitions (all printed as tables at the end and saved as CSV / JSON)
 Examples (one line each):
   python3 train_segformer_hf.py plot                       # from the segformer folder: plots the latest run in runs/
   python3 train_segformer_hf.py plot --run-dir runs/segformer_b0
-  python3 train_segformer_hf.py train --image-dir "../LunarSeg/image/{split}" --label-dir "../LunarSeg/label/{split}" --split-dir ../LunarSeg --out-dir runs/segformer_b2
-  python3 train_segformer_hf.py eval --image-dir "../LunarSeg/image/{split}" --label-dir "../LunarSeg/label/{split}" --split-dir ../LunarSeg --ckpt runs/segformer_b0/best --split test
+  python3 train_segformer_hf.py train --image-dir "../LunarSeg/image/{split}" --label-dir "../LunarSeg/label_color/{split}" --label-mode color --split-dir ../LunarSeg --out-dir runs/segformer_b2
+  python3 train_segformer_hf.py eval --image-dir "../LunarSeg/image/{split}" --label-dir "../LunarSeg/label_color/{split}" --label-mode color --split-dir ../LunarSeg --ckpt runs/segformer_b0/best --split test
   python3 train_segformer_hf.py eval ... --ckpt runs/segformer_b0/best --split test --output-dir runs/segformer_b0/preds
   python3 train_segformer_hf.py train --label-mode color --image-dir "../LunarSeg/image/{split}" --label-dir "../LunarSeg/label_color/{split}" --split-dir ../LunarSeg --in-channels 4 --depth-dir "../LunarSeg/depth/{split}" --out-dir runs/segformer_b2_rgbd
   python3 train_segformer_hf.py eval  ... --ckpt runs/segformer_b2_rgbd/best --depth-dir "../LunarSeg/depth/{split}"
@@ -1067,7 +1067,7 @@ def main():
         p.add_argument("--class-names", default=None,
                        help='Comma-separated names by class id, default "background,rock,crater" for 3 classes')
         p.add_argument("--image-dir", default="LunarSeg/image/{split}", help='RGB folder, e.g. "LunarSeg/image/{split}"')
-        p.add_argument("--label-dir", default="LunarSeg/label/{split}", help='Label folder, e.g. "LunarSeg/label/{split}"')
+        p.add_argument("--label-dir", default="LunarSeg/label_color/{split}", help='Label folder, e.g. "LunarSeg/label_color/{split}"')
         p.add_argument("--split-dir", default=str(_default_split), help="Folder with train.txt / validation.txt / test.txt (default: LunarSeg)")
         p.add_argument("--height", type=int, default=None, help="Network input height (default 480)")
         p.add_argument("--width", type=int, default=None, help="Network input width (default 640)")
@@ -1105,8 +1105,8 @@ def main():
                         "zero = start exactly as the pretrained RGB model; mean = copy of the mean RGB weights")
     t.add_argument("--random-init", action="store_true", help="Do not load pretrained weights (smoke tests only)")
     t.add_argument("--num-classes", type=int, default=None)
-    t.add_argument("--label-mode", choices=["id", "color"], default="id",
-                   help="id: label PNGs hold class ids. color: label PNGs are colour-coded masks")
+    t.add_argument("--label-mode", choices=["id", "color"], default="color",
+                   help="id: label PNGs hold class ids. color: label PNGs are colour-coded masks (default: color, matches label_color/ default)")
     t.add_argument("--color-map", default=None,
                    help='With --label-mode color: exact class colours "R,G,B;R,G,B;..." (id = position). '
                         'Default: found automatically (black = class 0, others by pixel count)')

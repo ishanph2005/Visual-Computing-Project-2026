@@ -29,8 +29,8 @@ The project is structured to keep third-party research frameworks unmodified as 
 │   └── segformer_env/              # Python virtual environment (user-created)
 ├── LuSeg/                           # Submodule: Upstream LuSeg repository (IROS 2025)
 ├── LunarSeg/                        # Lunar terrain hazard dataset annotations & splits
-│   ├── label/                      # 5,143 single-channel class ID masks (0, 1, 2)
-│   ├── label_color/                # Color-coded annotation masks (train/validation/test)
+│   ├── label/                      # Single-channel class ID masks (download from LuSeg)
+│   ├── label_color/                # Color-coded annotation masks (download from LuSeg; train/validation/test splits)
 │   ├── train.txt                   # 3,085 training sample IDs
 │   ├── validation.txt              # 1,028 validation sample IDs
 │   └── test.txt                    # 1,030 test sample IDs
@@ -148,18 +148,18 @@ curl -L -o SegFormer/mit-b2/pytorch_model.bin https://huggingface.co/nvidia/mit-
 ## 5. LunarSeg Dataset Setup
 
 ### A. Current Status & Missing Components
-- **Present:**
-  - `LunarSeg/label/`: 5,143 single-channel ground-truth annotation PNGs (`0 = background`, `1 = rock`, `2 = crater`).
-  - `LunarSeg/label_color/`: Color-coded masks divided into `train/` (3,085), `validation/` (1,028), and `test/` (1,030).
-  - `LunarSeg/train.txt`, `validation.txt`, `test.txt`: Split definition lists.
-- **Missing Modalities:**
+- **Present (in repo):**
+  - `LunarSeg/train.txt`, `validation.txt`, `test.txt`: Split definition lists (3,085 / 1,028 / 1,030 samples).
+- **Must be downloaded from the LuSeg dataset:**
   - `LunarSeg/image/`: Photorealistic RGB surface images.
   - `LunarSeg/depth/`: Ground-truth depth maps.
+  - `LunarSeg/label/`: 5,143 single-channel class ID masks (`0 = background`, `1 = rock`, `2 = crater`).
+  - `LunarSeg/label_color/`: Color-coded annotation masks, pre-split into `train/` (3,085), `validation/` (1,028), and `test/` (1,030).
 
 ### B. Downloading Missing Dataset Files
 1. **Source:** Released under *LuSeg: Efficient Negative and Positive Obstacles Segmentation via Contrast-Driven Multi-Modal Feature Fusion on the Lunar Surface* (IROS).
 2. **Download Repository:** Available via the official repository at **[nubot-nudt/LuSeg](https://github.com/nubot-nudt/LuSeg)**.
-3. Access the Google Drive links in the **Dataset** section of the LuSeg repository to download the `image` and `depth` archives.
+3. Access the Google Drive links in the **Dataset** section of the LuSeg repository to download the `image`, `depth`, `label`, and `label_color` archives.
 4. Extract the archives into `LunarSeg/`. If downloaded as flat folders, partition them into `train/`, `validation/`, and `test/` splits automatically using `scripts/split_dataset.py`.
 
 ---
@@ -264,6 +264,8 @@ Fine-tunes `mit-b2` on 3-channel RGB imagery with cross-entropy loss, polynomial
 python3 scripts/train_segformer_hf.py train \
     --model SegFormer/mit-b2 \
     --in-channels 3 \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
     --out-dir runs/segformer_b2_rgb \
     --epochs 30 --batch-size 4 --accum 4 \
     --lr 6e-5 --height 480 --width 640
@@ -292,6 +294,8 @@ Evaluates the model on `test.txt`. In addition to standard pixel metrics (mIoU, 
 ```bash
 python3 scripts/train_segformer_hf.py eval \
     --ckpt runs/segformer_b2_rgb/best \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
     --split test \
     --output-dir runs/segformer_b2_rgb/preds
 ```
@@ -302,6 +306,8 @@ Simulates lighting drops, sensor noise, and camera blur to evaluate out-of-distr
 ```bash
 python3 scripts/train_segformer_hf.py analyze \
     --ckpt runs/segformer_b2_rgb/best \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
     --split test \
     --corruptions "darker:0.5,gamma:2.0,noise:25,blur:2"
 ```
