@@ -15,7 +15,6 @@ The project is structured to keep third-party research frameworks unmodified as 
 │   ├── finetune_lunar.py           # DAv2 metric head fine-tuning & evaluation on LunarSeg
 │   ├── inference_dav2.py           # Batched inference with fine-tuned DAv2 checkpoints
 │   ├── count_gflops.py             # FLOPs, GMACs, latency, and parameter profiler for DAv2
-│   ├── compare_metric_depth.py     # Compares predicted depth against LunarSeg ground truth
 │   ├── train_segformer_hf.py       # Hugging Face SegFormer pipeline (RGB & RGB-D, train/eval/analyze/plot)
 │   ├── plot_results.py             # Visualizes loss and per-class IoU curves from history.json
 │   ├── split_dataset.py            # Multipurpose dataset splitter (symlink, hardlink, copy, move)
@@ -186,13 +185,13 @@ python3 scripts/split_dataset.py /path/to/downloaded_images LunarSeg LunarSeg/im
 > [!NOTE]
 > `scripts/split_images.py` is maintained as a backward-compatible wrapper that automatically forwards arguments to `split_dataset.py` with copy/move semantics.
 
-#### 3. Convert Depth PNGs to Float32 `[0, 1]` `.npz` Archives
-Normalizes 8-bit or 16-bit depth PNGs into compressed single-channel `.npz` arrays:
+#### 2. Convert Depth PNGs to Float32 `[0, 1]` `.npz` Archives
+Normalizes 8-bit or 16-bit depth PNGs into compressed single-channel `.npz` arrays (automatically sorted into `train/`, `validation/`, and `test/` splits):
 ```bash
-python3 scripts/png_to_npz.py LunarSeg/depth/test LunarSeg/depth_npz/test --compressed
+python3 scripts/png_to_npz.py LunarSeg/depth LunarSeg/depth_npz --compressed
 ```
 
-#### 4. Flatten Files from Nested Folders
+#### 3. Flatten Files from Nested Folders
 Aggregates all files of given extensions into a single flat directory:
 ```bash
 python3 scripts/file_to_folder.py LunarSeg/image all_images --ext png --mode copy
@@ -203,11 +202,11 @@ python3 scripts/file_to_folder.py LunarSeg/image all_images --ext png --mode cop
 ### Phase 2: Monocular & Metric Depth Estimation (Depth Anything V2)
 
 #### 1. Relative Depth Inference with Compressed `.npz` Export
-Runs Depth Anything V2 inference on an image or directory. Exports side-by-side (or depth-only with `--pred-only`) PNG visualizations alongside compressed float32 raw depth arrays (`_raw.npz`):
+Runs Depth Anything V2 inference on an image or directory. Exports side-by-side (or depth-only with `--pred-only`) PNG visualizations alongside compressed float32 raw depth arrays (`_raw.npz`), automatically organized into split subdirectories:
 ```bash
 python3 scripts/run_dav2_raw.py \
     --encoder vitl \
-    --img-path LunarSeg/image/test \
+    --img-path LunarSeg/image \
     --outdir outputs/depth_rel \
     --pred-only
 ```
@@ -233,37 +232,27 @@ python3 scripts/finetune_lunar.py eval \
 ```
 
 #### 4. Batched Inference with Fine-Tuned Depth Model
-Generates float32 depth `.npy` arrays and 8-bit grayscale `.png` previews:
+Generates float32 depth `.npy` arrays and 8-bit grayscale `.png` previews automatically organized into `train/`, `validation/`, and `test/` subfolders:
 ```bash
 python3 scripts/inference_dav2.py \
     --ckpt runs/dav2_lunar_vits/best.pth \
-    --img-dir LunarSeg/image/test \
+    --img-dir LunarSeg/image \
     --out-dir outputs/dav2_lunar_preds
 ```
 
-#### 5. Benchmark Metric Predictions Against Lunar Ground Truth
-Computes AbsRel, RMSE, $\delta_1$, and Spearman rank correlation between predictions and ground-truth PNGs, supporting least-squares scale-shift alignment (`--align scale_shift`) and CSV export:
-```bash
-python3 scripts/compare_metric_depth.py \
-    --pred-dir outputs/dav2_lunar_preds \
-    --gt-dir LunarSeg/depth/test \
-    --align scale_shift \
-    --csv outputs/depth_benchmark.csv
-```
-
-#### 6. Min-Max Normalizer for Predicted Depth `.npz` Maps
-Normalizes raw `.npz` depth maps to $[0, 1]$ with optional value inversion (`--invert`):
+#### 5. Min-Max Normalizer for Predicted Depth `.npz` Maps
+Normalizes raw `.npz` depth maps to $[0, 1]$ with optional value inversion (`--invert`) and automatic split directory organization:
 ```bash
 python3 scripts/normalize_npz.py outputs/depth_rel outputs/depth_normalized --compressed
 ```
 
-#### 7. Convert Depth `.npy` Files to Grayscale PNGs
-Batch-converts float depth arrays into min-max normalized 8-bit grayscale PNGs:
+#### 6. Convert Depth `.npy` Files to Grayscale PNGs
+Batch-converts float depth arrays into min-max normalized 8-bit grayscale PNGs organized into split subdirectories:
 ```bash
 python3 scripts/npy_png_converter.py -i outputs/dav2_lunar_preds -o outputs/dav2_lunar_pngs
 ```
 
-#### 8. Computational Complexity Profiler (FLOPs & Latency)
+#### 7. Computational Complexity Profiler (FLOPs & Latency)
 Measures parameter count, forward-pass GFLOPs / GMACs via PyTorch `FlopCounterMode`, encoder vs. decoder FLOP breakdown, inference latency (ms), and achieved GFLOPS throughput:
 ```bash
 python3 scripts/count_gflops.py \
@@ -273,13 +262,13 @@ python3 scripts/count_gflops.py \
     --runs 10
 ```
 
-#### 9. Interactive Gradio Web Demo
+#### 8. Interactive Gradio Web Demo
 Launches a local browser interface with an interactive slider comparing input images and predicted depth:
 ```bash
 python3 Depth-Anything-V2/app.py
 ```
 
-#### 10. Generate 3D Point Clouds
+#### 9. Generate 3D Point Clouds
 Projects 2D images and metric depth maps into colored 3D point clouds (`.ply` format via Open3D):
 ```bash
 python3 Depth-Anything-V2/metric_depth/depth_to_pointcloud.py \
@@ -332,7 +321,7 @@ python3 scripts/train_segformer_hf.py eval \
     --split test \
     --output-dir runs/segformer_b2_rgb/preds
 ```
-*(Exports color-coded predicted masks `<name>_mask.png` and uint8 class ID arrays `<name>.npy` to `--output-dir`).*
+*(Exports color-coded predicted masks `<name>_mask.png` and uint8 class ID arrays `<name>.npy` to `--output-dir`, automatically organized into split subdirectories like `<output-dir>/<split>/`).*
 
 #### 4. Robustness to Test-Time Environmental Corruptions
 Simulates lighting drops, sensor noise, and camera blur to evaluate out-of-distribution resilience:
@@ -361,7 +350,6 @@ python3 scripts/plot_results.py \
 | **`finetune_lunar.py`** | `Depth-Anything-V2`, `LunarSeg` | Fine-tune DAv2 metric head directly on LunarSeg | `best.pth`, `last.pth`, `config.json`, `.npy` |
 | **`inference_dav2.py`** | `Depth-Anything-V2` | Batch inference with fine-tuned DAv2 weights | Float32 `[0, 1]` `.npy` & 8-bit preview `.png` |
 | **`count_gflops.py`** | `Depth-Anything-V2` | Profiles GFLOPs, GMACs, latency, and throughput | Terminal benchmark breakdown |
-| **`compare_metric_depth.py`** | `LunarSeg` | Compares depth predictions vs ground truth | AbsRel, RMSE, $\delta_1$, Spearman stats, `.csv` |
 | **`train_segformer_hf.py`** | `SegFormer/mit-b2`, `LunarSeg` | SegFormer RGB/RGB-D fine-tuning, eval & corruptions | `best/`, `last/`, `history.json`, `_mask.png` |
 | **`plot_results.py`** | Training runs | Plots training/validation loss and per-class IoU | `training_curves.png` |
 | **`split_dataset.py`** | `LunarSeg` | Multipurpose dataset splitter (symlink/hardlink/copy/move) | `train/`, `validation/`, `test/` directories |

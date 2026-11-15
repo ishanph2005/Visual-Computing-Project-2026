@@ -24,6 +24,7 @@ import argparse
 import json
 import math
 import random
+import re
 import sys
 import time
 from pathlib import Path
@@ -310,15 +311,63 @@ def cmd_eval(args):
     print(f"{args.split} ({len(ds)} imgs), no alignment: {fmt(res)}")
 
 
+def load_split_map(split_dir: Path | None = None) -> dict[str, str]:
+    candidates = []
+    if split_dir and Path(split_dir).is_dir():
+        candidates.append(Path(split_dir))
+    candidates.extend([DEFAULT_LUNAR_DIR, Path("LunarSeg"), Path(".")])
+    target_dir = next((c for c in candidates if c.exists() and (c / "train.txt").exists()), None)
+    if not target_dir:
+        return {}
+    mapping = {}
+    for s in ("train", "validation", "test"):
+        txt = target_dir / f"{s}.txt"
+        if txt.exists():
+            for line in txt.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    mapping[Path(line).name] = s
+                    mapping[Path(line).stem] = s
+    return mapping
+
+
+def resolve_split(file_path: Path, split_map: dict[str, str]) -> str | None:
+    for p in reversed(file_path.parent.parts):
+        low = p.lower()
+        if low in ("train", "test", "validation"):
+            return low
+        if low in ("val", "valid"):
+            return "validation"
+    if split_map:
+        if file_path.name in split_map:
+            return split_map[file_path.name]
+        if file_path.stem in split_map:
+            return split_map[file_path.stem]
+        m = re.search(r"\d{2}_\d{4}", file_path.stem)
+        if m and m.group(0) in split_map:
+            return split_map[m.group(0)]
+        for key, s in split_map.items():
+            if key in file_path.stem:
+                return s
+    return None
+
+
 @torch.no_grad()
 def cmd_predict(args):
     model, device = load_for_inference(args)
     use_amp = device.type == "cuda" and not args.no_amp
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    files = sorted(p for p in Path(args.img_dir).iterdir() if p.suffix.lower() in IMG_EXTS)
+    img_dir = Path(args.img_dir)
+    files = sorted(p for p in img_dir.rglob("*") if p.is_file() and p.suffix.lower() in IMG_EXTS)
+    if not files:
+        files = sorted(p for p in img_dir.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXTS)
     if not files:
         sys.exit(f"No images in {args.img_dir}")
+
+    split_map = {} if getattr(args, "no_auto_split", False) else load_split_map(getattr(args, "split_dir", None))
+    counts = {"train": 0, "validation": 0, "test": 0, "root": 0}
+
     for k, f in enumerate(files):
         bgr = cv2.imread(str(f), cv2.IMREAD_COLOR)
         if bgr is None:
@@ -330,11 +379,24 @@ def cmd_predict(args):
             pred = model(x)
         pred = F.interpolate(pred.float()[:, None], (h0, w0), mode="bilinear", align_corners=False)[0, 0]
         pred = pred.clamp(0, 1).cpu().numpy().astype(np.float32)
-        np.save(out / f"{f.stem}.npy", pred)
+
+        split = None if getattr(args, "no_auto_split", False) else resolve_split(f, split_map)
+        if split:
+            target_dir = out / split
+            counts[split] = counts.get(split, 0) + 1
+        else:
+            target_dir = out
+            counts["root"] = counts.get("root", 0) + 1
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        np.save(target_dir / f"{f.stem}.npy", pred)
         if args.save_png:
-            cv2.imwrite(str(out / f"{f.stem}.png"), np.round(pred * 255).astype(np.uint8))
+            cv2.imwrite(str(target_dir / f"{f.stem}.png"), np.round(pred * 255).astype(np.uint8))
         if (k + 1) % 50 == 0 or k + 1 == len(files):
             print(f"{k + 1}/{len(files)}")
+
+    summary = ", ".join(f"{k}: {v}" for k, v in counts.items() if v > 0)
+    print(f"Done: {len(files)} image(s) -> {out} ({summary})")
 
 
 def main():
@@ -391,6 +453,8 @@ def main():
     p.add_argument("--img-dir", type=Path, required=True)
     p.add_argument("--out-dir", type=Path, required=True)
     p.add_argument("--save-png", action="store_true", help="also write 8-bit PNG (value*255) like the GT")
+    p.add_argument("--split-dir", type=Path, default=None, help="Directory containing split txt files")
+    p.add_argument("--no-auto-split", action="store_true", help="Disable automatic split folder organization")
     p.set_defaults(fn=cmd_predict)
 
     args = ap.parse_args()

@@ -1041,12 +1041,17 @@ def _setup_eval(args):
 
 def cmd_eval(args):
     model, ds, device, use_amp, n, names, colors = _setup_eval(args)
-    res = full_eval(model, ds, device, use_amp, n, args.workers,
-                    out_dir=args.output_dir, palette=colors)  # masks use the label colours when known
-    print(f"{args.split} ({len(ds)} imgs): {fmt(res, names)}")
     if args.output_dir:
-        print(f"Saved {len(ds)} x (<name>_mask.png, <name>.npy) to {args.output_dir}")
-    report_eval(res, names, args.split, args.output_dir or Path(args.ckpt).parent,
+        eval_out_dir = args.output_dir if getattr(args, "no_auto_split", False) else (args.output_dir / args.split)
+        eval_out_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        eval_out_dir = None
+    res = full_eval(model, ds, device, use_amp, n, args.workers,
+                    out_dir=eval_out_dir, palette=colors)  # masks use the label colours when known
+    print(f"{args.split} ({len(ds)} imgs): {fmt(res, names)}")
+    if eval_out_dir:
+        print(f"Saved {len(ds)} x (<name>_mask.png, <name>.npy) to {eval_out_dir}")
+    report_eval(res, names, args.split, eval_out_dir or Path(args.ckpt).parent,
                 args.baseline_conf, args.n_boot, args.boot_seed)
 
 
@@ -1122,6 +1127,8 @@ def main():
     e.add_argument("--split", default="test")
     e.add_argument("--output-dir", type=Path, default=None,
                    help="If set, save predicted masks here: <name>_mask.png (colour) and <name>.npy (class ids)")
+    e.add_argument("--no-auto-split", action="store_true",
+                   help="Save predictions directly in --output-dir without split subdirectory")
     e.add_argument("--color-map", default=None,
                    help='Colour labels only: override the colours saved by train, "R,G,B;R,G,B;..."')
     e.set_defaults(fn=cmd_eval)
