@@ -28,7 +28,7 @@ The project is structured to keep third-party research frameworks unmodified as 
 │   └── metric_depth/               # Metric depth estimation module & checkpoints
 ├── SegFormer/                       # Submodule: Upstream NVIDIA SegFormer repository
 │   ├── mit-b2/                     # Pretrained SegFormer-B2 encoder weights & config
-│   └── segformer_env/              # Configured Python virtual environment
+│   └── segformer_env/              # Python virtual environment (user-created)
 ├── LuSeg/                           # Submodule: Upstream LuSeg repository (IROS 2025)
 ├── LunarSeg/                        # Lunar terrain hazard dataset annotations & splits
 │   ├── label/                      # 5,143 single-channel class ID masks (0, 1, 2)
@@ -73,27 +73,39 @@ cd SegFormer && git restore . && cd ..
 
 ## 3. Environment & Dependencies Installation
 
-### Option A: Using the Configured Environment
-The virtual environment in `SegFormer/segformer_env` is pre-configured with PyTorch 2.14.0+cu130, Hugging Face `transformers`, and imaging libraries:
+`SegFormer/segformer_env` is not bundled by default (virtual environments are excluded via `.gitignore`). Follow the steps below to set up the dedicated Python 3.10+ virtual environment:
+
+### Setting Up `SegFormer/segformer_env` (Recommended)
+```bash
+# 1. Create a Python 3.10 virtual environment inside SegFormer/
+python3 -m venv SegFormer/segformer_env
+
+# 2. Activate the virtual environment
+source SegFormer/segformer_env/bin/activate
+
+# 3. Upgrade pip
+pip install --upgrade pip
+
+# 4. Install PyTorch with CUDA matching your system (e.g. CUDA 12.1 or 11.8)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+
+# 5. Install Hugging Face Transformers, Computer Vision & Scientific libraries
+pip install transformers huggingface_hub safetensors opencv-python matplotlib numpy scipy pandas tqdm pillow
+```
+
+*(For subsequent terminal sessions, simply activate the environment):*
 ```bash
 source SegFormer/segformer_env/bin/activate
 ```
 
-### Option B: Fresh Environment Setup (Python 3.10+)
-To configure a unified root environment:
+### Alternative: Root Virtual Environment (`venv`)
+If you prefer a root-level virtual environment instead:
 ```bash
-# 1. Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# 2. Install PyTorch with CUDA matching your GPU
+pip install --upgrade pip
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-
-# 3. Install Transformers, Imaging & Web UI dependencies
-pip install transformers opencv-python matplotlib numpy tqdm safetensors gradio gradio_imageslider
-
-# 4. Install Metric Depth, Point Cloud & Analysis dependencies
-pip install open3d scipy pandas tensorboard
+pip install transformers huggingface_hub safetensors opencv-python matplotlib numpy scipy pandas tqdm pillow
 ```
 
 ---
