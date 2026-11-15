@@ -44,36 +44,11 @@ The project is structured to keep third-party research frameworks unmodified as 
 
 ## 2. Working with Git Submodules
 
-### How Submodules Work
-A Git submodule tracks a specific commit hash of an external Git repository via a `.gitmodules` file in your root project. By referencing official upstream repositories directly as submodules and keeping all project-specific logic in `scripts/`, you avoid forking third-party repositories and maintain clean code boundaries.
-
-### Initial Setup (Adding Submodules from Scratch)
-If you are initializing this repository or pushing it to a new remote:
-
-```bash
-# 1. Initialize root git repository
-git init -b main
-
-# 2. Add upstream repositories as submodules
-git submodule add https://github.com/DepthAnything/Depth-Anything-V2.git Depth-Anything-V2
-git submodule add https://github.com/NVlabs/SegFormer.git SegFormer
-git submodule add https://github.com/nubot-nudt/LuSeg.git LuSeg
-
-# 3. Verify .gitmodules was generated
-cat .gitmodules
-
-# 4. Commit and push
-git add .gitmodules Depth-Anything-V2 SegFormer LuSeg scripts LunarSeg .gitignore README.md
-git commit -m "Initialize project with Depth-Anything-V2, SegFormer, and LuSeg submodules"
-git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-git push -u origin main
-```
-
 ### Cloning a Repository with Submodules
-To clone this project with all original submodule files and directory structures populated:
+To clone this project with all upstream submodules populated:
 ```bash
-git clone --recurse-submodules https://github.com/<your-username>/<your-repo-name>.git
-cd <your-repo-name>
+git clone --recurse-submodules https://github.com/ishanph2005/Visual-Computing-Project-2026.git
+cd Visual-Computing-Project-2026
 ```
 
 If the repository was cloned without `--recurse-submodules`, initialize and pull them at any time with:
@@ -129,13 +104,33 @@ Checkpoints must be placed in their expected paths before running inference or f
 
 | Model | Path | Source / Status |
 | :--- | :--- | :--- |
-| **Depth Anything V2 Large** | `Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth` | Pre-downloaded (335M params) |
+| **Depth Anything V2 Large** | `Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth` | Hugging Face (335M params) |
 | **Depth Anything V2 Metric Hypersim** | `Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth` | Pre-downloaded (indoor metric) |
-| **SegFormer MIT-B2** | `SegFormer/mit-b2/` | Pre-downloaded (`pytorch_model.bin`, `config.json`) |
+| **SegFormer MIT-B2** | `SegFormer/mit-b2/` | Hugging Face (`pytorch_model.bin`, `config.json`) |
 
-*For lightweight GPUs (e.g. 4–6 GB VRAM), download the `vits` checkpoint from Hugging Face:*
+#### Download Depth Anything V2 Checkpoints
 ```bash
+# Download Depth Anything V2 Large (ViT-L, 335M params):
+mkdir -p Depth-Anything-V2/checkpoints
+wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
+
+# Or using curl:
+curl -L -o Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
+
+# (Optional) For smaller GPUs (4–6 GB VRAM), download ViT-Small (ViT-S, 25M params):
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
+```
+
+#### Download SegFormer MIT-B2 Pretrained Weights
+```bash
+# Download MIT-B2 encoder weights & configuration:
+mkdir -p SegFormer/mit-b2
+wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/config.json
+wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/pytorch_model.bin
+
+# Or using curl:
+curl -L -o SegFormer/mit-b2/config.json https://huggingface.co/nvidia/mit-b2/resolve/main/config.json
+curl -L -o SegFormer/mit-b2/pytorch_model.bin https://huggingface.co/nvidia/mit-b2/resolve/main/pytorch_model.bin
 ```
 
 ---
@@ -166,24 +161,15 @@ All commands below should be executed from the **repository root directory**.
 ### Phase 1: Dataset Partitioning & Preprocessing
 
 #### 1. Multipurpose Dataset Splitter (`split_dataset.py`)
-Partitions images and dataset files into `train/`, `validation/`, and `test/` subfolders according to `train.txt`, `test.txt`, and `validation.txt`. Supports multiple transfer modes (`symlink`, `hardlink`, `copy`, `move`):
+Partitions images and dataset files into `train/`, `validation/`, and `test/` subfolders according to `train.txt`, `test.txt`, and `validation.txt`:
 
 ```bash
-# Non-destructive splitting via symlinks (default, saves disk space):
-python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --ext .png
-
-# Hardlink mode (zero extra disk space on same filesystem):
-python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --hardlink
-
-# Physical copy mode (creates independent duplicate copies):
-python3 scripts/split_dataset.py /path/to/downloaded_images --output-dir LunarSeg/image --copy
-
-# Move mode (moves original files directly into split folders):
-python3 scripts/split_dataset.py /path/to/downloaded_images LunarSeg LunarSeg/image --move
+# Organize files into splits with selectable transfer mode:
+python3 scripts/split_dataset.py /path/to/downloaded_images \
+    --output-dir LunarSeg/image \
+    --mode symlink  # options: symlink (default), hardlink, copy, move \
+    --ext .png
 ```
-
-> [!NOTE]
-> `scripts/split_images.py` is maintained as a backward-compatible wrapper that automatically forwards arguments to `split_dataset.py` with copy/move semantics.
 
 #### 2. Convert Depth PNGs to Float32 `[0, 1]` `.npz` Archives
 Normalizes 8-bit or 16-bit depth PNGs into compressed single-channel `.npz` arrays (automatically sorted into `train/`, `validation/`, and `test/` splits):
@@ -260,22 +246,6 @@ python3 scripts/count_gflops.py \
     --encoder vitl \
     --variant relative \
     --runs 10
-```
-
-#### 8. Interactive Gradio Web Demo
-Launches a local browser interface with an interactive slider comparing input images and predicted depth:
-```bash
-python3 Depth-Anything-V2/app.py
-```
-
-#### 9. Generate 3D Point Clouds
-Projects 2D images and metric depth maps into colored 3D point clouds (`.ply` format via Open3D):
-```bash
-python3 Depth-Anything-V2/metric_depth/depth_to_pointcloud.py \
-    --encoder vitl \
-    --load-from Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth \
-    --img-path LunarSeg/image/test/00_0013.png \
-    --outdir outputs/pointclouds
 ```
 
 ---
