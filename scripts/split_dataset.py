@@ -14,7 +14,7 @@ Usage Examples:
     # 1. Non-destructive symlink into train/, validation/, test/ (default)
     python3 scripts/split_dataset.py LunarSeg/all_images --output-dir LunarSeg/image --ext .png
 
-    # 2. Positional format (compatible with split_images.py)
+    # 2. Positional format [split_dir] [output_dir]
     python3 scripts/split_dataset.py LunarSeg/all_images LunarSeg LunarSeg/image --copy
     python3 scripts/split_dataset.py LunarSeg/all_images LunarSeg LunarSeg/image --move
 
