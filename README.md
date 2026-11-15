@@ -140,9 +140,9 @@ mkdir -p Depth-Anything-V2/checkpoints
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
 # 2. Download ViT-Small (ViT-S, 25M params - used in Section 6 fine-tuning):
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
-# 3. (Optional) Download Metric Hypersim ViT-L weights:
+# 3. (Optional) Download Metric Hypersim ViT-S weights:
 mkdir -p Depth-Anything-V2/metric_depth/checkpoints
-wget -P Depth-Anything-V2/metric_depth/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/depth_anything_v2_metric_hypersim_vitl.pth
+wget -P Depth-Anything-V2/metric_depth/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Small/resolve/main/depth_anything_v2_metric_hypersim_vits.pth
 ```
 
 #### Download SegFormer MIT-B2 Pretrained Weights
@@ -165,8 +165,12 @@ visual-computing-project/
 │   ├── finetuned.zip
 │   │   └── Estimated depth maps generated using the fine-tuned model.
 │   │
+│   ├── LunarSeg.zip
+│   │   └── Modified LunarSeg dataset (with train, test, validation split)
+│   │
 │   └── depthmodel_results.zip
-│       └── Estimated disparity maps generated using the depth model.
+│       └── Estimated disparity maps generated using the depth model
+│
 │
 └── checkpoints/
     ├── U-Net/
