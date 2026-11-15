@@ -1,4 +1,4 @@
-# Multi-Modal Lunar Terrain Hazard Segmentation & Depth Estimation
+# Vision-Based Hazard Segmentation for Lunar Rover Navigation
 
 This repository implements an end-to-end multi-modal vision pipeline for lunar hazard detection (positive obstacles: **rocks and boulders**; negative obstacles: **craters**). It integrates **Depth Anything V2 (DAv2)** for monocular relative and metric depth estimation with two semantic segmentation architectures — **SegFormer** (transformer-based) and **UNet** (CNN-based, ResNet-34 encoder) — on the **LunarSeg** benchmark dataset.
 
