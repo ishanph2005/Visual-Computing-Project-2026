@@ -154,8 +154,7 @@ wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/pyto
 ```
 
 #### Dataset and Checkpoint Setup
-
-All required datasets and model checkpoints are available in the Google Drive folder **`visual-computing-project`**.
+All required datasets and model checkpoints are available in the [Google Drive – visual-computing-project](https://drive.google.com/drive/folders/1-TFIPXjvOhCb2KNSxU2zA8J4V2xV6FEg?usp=sharing).
 
 ## Google Drive Directory Structure
 
