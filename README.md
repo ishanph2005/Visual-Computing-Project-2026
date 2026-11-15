@@ -153,7 +153,7 @@ wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/conf
 wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/pytorch_model.bin
 ```
 
-# Dataset and Checkpoint Setup
+#### Dataset and Checkpoint Setup
 
 All required datasets and model checkpoints are available in the Google Drive folder **`visual-computing-project`**.
 
@@ -177,7 +177,7 @@ visual-computing-project/
         └── checkpoints.zip
 ```
 
-## Setup Instructions
+#### Setup Instructions
 
 1. **Download the datasets:** Download `finetuned.zip` and `depthmodel_results.zip` from the `dataset/` directory and extract their contents into the user's current working directory.
 
@@ -187,8 +187,6 @@ visual-computing-project/
 ```
 
 **Note:** The dataset archives must be extracted into the current working directory, whereas model checkpoints must be extracted into their respective directories under `checkpoints/`. Ensure that the extracted files are accessible at the paths expected by the project scripts.
-
----
 
 ## 5. LunarSeg Dataset Setup
 
