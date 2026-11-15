@@ -138,19 +138,11 @@ mkdir -p Depth-Anything-V2/checkpoints
 
 # 1. Download Depth Anything V2 Large (ViT-L, 335M params):
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
-# Or using curl:
-curl -L -o Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
-
 # 2. Download ViT-Small (ViT-S, 25M params - used in Section 6 fine-tuning):
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
-# Or using curl:
-curl -L -o Depth-Anything-V2/checkpoints/depth_anything_v2_vits.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
-
 # 3. (Optional) Download Metric Hypersim ViT-L weights:
 mkdir -p Depth-Anything-V2/metric_depth/checkpoints
 wget -P Depth-Anything-V2/metric_depth/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/depth_anything_v2_metric_hypersim_vitl.pth
-# Or using curl:
-curl -L -o Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/depth_anything_v2_metric_hypersim_vitl.pth
 ```
 
 #### Download SegFormer MIT-B2 Pretrained Weights
@@ -159,11 +151,42 @@ curl -L -o Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_h
 mkdir -p SegFormer/mit-b2
 wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/config.json
 wget -P SegFormer/mit-b2/ https://huggingface.co/nvidia/mit-b2/resolve/main/pytorch_model.bin
-
-# Or using curl:
-curl -L -o SegFormer/mit-b2/config.json https://huggingface.co/nvidia/mit-b2/resolve/main/config.json
-curl -L -o SegFormer/mit-b2/pytorch_model.bin https://huggingface.co/nvidia/mit-b2/resolve/main/pytorch_model.bin
 ```
+
+# Dataset and Checkpoint Setup
+
+All required datasets and model checkpoints are available in the Google Drive folder **`visual-computing-project`**.
+
+## Google Drive Directory Structure
+
+```text
+visual-computing-project/
+│
+├── dataset/
+│   ├── finetuned.zip
+│   │   └── Estimated depth maps generated using the fine-tuned model.
+│   │
+│   └── depthmodel_results.zip
+│       └── Estimated disparity maps generated using the depth model.
+│
+└── checkpoints/
+    ├── U-Net/
+    │   └── checkpoints.zip
+    │
+    └── SegFormer/
+        └── checkpoints.zip
+```
+
+## Setup Instructions
+
+1. **Download the datasets:** Download `finetuned.zip` and `depthmodel_results.zip` from the `dataset/` directory and extract their contents into the user's current working directory.
+
+2. **Download model checkpoints:** Download the respective `checkpoints.zip` files from the `U-Net/` and `SegFormer/` directories.
+
+3. **Extract checkpoints:** Extract each ZIP archive and place its contents under the corresponding checkpoint directory, ensuring that the directory structure is preserved.
+```
+
+**Note:** The dataset archives must be extracted into the current working directory, whereas model checkpoints must be extracted into their respective directories under `checkpoints/`. Ensure that the extracted files are accessible at the paths expected by the project scripts.
 
 ---
 
