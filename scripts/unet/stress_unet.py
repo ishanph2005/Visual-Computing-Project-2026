@@ -57,6 +57,8 @@ def parse_args():
     p.add_argument("--thresholds", nargs="+", type=float, default=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     p.add_argument("--min_area", type=int, default=20, help="Minimum connected component area (px)")
     p.add_argument("--limit", type=int, default=0, help="Optional sample limit for quick smoke testing")
+    p.add_argument("--n_warmup", type=int, default=15, help="Number of warm-up iterations for latency test")
+    p.add_argument("--n_iter", type=int, default=50, help="Number of timed iterations for latency test")
     p.add_argument("--out", default="results/unet_stress", help="Output directory for reports")
     return p.parse_args()
 
@@ -108,13 +110,13 @@ def main():
             dummy = torch.randn(1, in_ch, 480, 640).to(dev)
 
             # Warm-up
-            for _ in range(15):
+            for _ in range(args.n_warmup):
                 _ = model(dummy)
             if dev == "cuda":
                 torch.cuda.synchronize()
 
             times = []
-            for _ in range(50):
+            for _ in range(args.n_iter):
                 t0 = time.perf_counter()
                 _ = model(dummy)
                 if dev == "cuda":

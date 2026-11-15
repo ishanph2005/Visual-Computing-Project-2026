@@ -47,9 +47,10 @@ def parse_args():
     p.add_argument("--split", default="test", choices=["train", "validation", "test"], help="Split to evaluate on")
     p.add_argument("--root", default=None, help="Dataset root directory")
     p.add_argument("--hit", type=float, default=0.5, help="Minimum overlap fraction to count a hazard as detected")
-    p.add_argument("--boot", type=int, default=1000, help="Number of bootstrap resamples for 95% CIs")
+    p.add_argument("--boot", type=int, default=1000, help="Number of bootstrap resamples for 95%% CIs")
     p.add_argument("--min_area", type=int, default=20, help="Minimum hazard area in pixels (ignores tiny noise)")
     p.add_argument("--n_disagree", type=int, default=8, help="Number of worst disagreement images to save")
+    p.add_argument("--n_vis", type=int, default=None, help="Number of qualitative images to save (alias for --n_disagree)")
     p.add_argument("--out", default="results/unet_compare", help="Directory to save comparison outputs")
     return p.parse_args()
 

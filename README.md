@@ -286,77 +286,9 @@ python3 scripts/count_gflops.py \
 
 ---
 
-### Phase 3: Semantic Hazard Segmentation (SegFormer)
+### Phase 3: Semantic Hazard Segmentation (UNet — ResNet-34 Encoder)
 
-The Hugging Face pipeline in `scripts/train_segformer_hf.py` runs natively on modern PyTorch + `transformers`, operating completely offline (`HF_HUB_OFFLINE=1`).
-
-#### 1. RGB Mode Training (3 Input Channels)
-Fine-tunes `mit-b2` on 3-channel RGB imagery with cross-entropy loss, polynomial decay, and validation checkpoints:
-```bash
-python3 scripts/train_segformer_hf.py train \
-    --model SegFormer/mit-b2 \
-    --in-channels 3 \
-    --label-dir "LunarSeg/label_color/{split}" \
-    --label-mode color \
-    --out-dir runs/segformer_b2_rgb \
-    --epochs 30 --batch-size 4 --accum 4 \
-    --lr 6e-5 --height 480 --width 640
-```
-
-#### 2. Multi-Modal RGB-D Training (4 Input Channels)
-Expands the first patch-embedding layer to 4 channels ($3\text{ RGB} + 1\text{ Depth}$). Pretrained RGB weights are preserved, and new depth weights are initialized to zero (`--depth-init zero`):
-```bash
-python3 scripts/train_segformer_hf.py train \
-    --model SegFormer/mit-b2 \
-    --in-channels 4 \
-    --depth-dir "LunarSeg/depth/{split}" \
-    --label-mode color \
-    --label-dir "LunarSeg/label_color/{split}" \
-    --out-dir runs/segformer_b2_rgbd \
-    --epochs 30 --batch-size 4 --accum 4
-```
-
-#### 3. Evaluation & Hazard Detection Analysis
-Evaluates the model on `test.txt`. In addition to standard pixel metrics (mIoU, precision, recall), it computes **hazard-level detection rates** categorized by physical pixel size/distance:
-- **Small (20–300 px):** Distant hazards
-- **Medium (300–3000 px):** Intermediate hazards
-- **Large (>3000 px):** Close hazards
-- **False Alarms per Image:** Predicted hazard clusters that overlap zero ground-truth pixels.
-
-```bash
-python3 scripts/train_segformer_hf.py eval \
-    --ckpt runs/segformer_b2_rgb/best \
-    --label-dir "LunarSeg/label_color/{split}" \
-    --label-mode color \
-    --split test \
-    --output-dir runs/segformer_b2_rgb/preds
-```
-*(Exports color-coded predicted masks `<name>_mask.png` and uint8 class ID arrays `<name>.npy` to `--output-dir`, automatically organized into split subdirectories like `<output-dir>/<split>/`).*
-
-#### 4. Robustness to Test-Time Environmental Corruptions
-Simulates lighting drops, sensor noise, and camera blur to evaluate out-of-distribution resilience:
-```bash
-python3 scripts/train_segformer_hf.py analyze \
-    --ckpt runs/segformer_b2_rgb/best \
-    --label-dir "LunarSeg/label_color/{split}" \
-    --label-mode color \
-    --split test \
-    --corruptions "darker:0.5,gamma:2.0,noise:25,blur:2"
-```
-
-#### 5. Plotting Training Curves
-Re-generates loss curves and IoU progressions from `history.json`:
-```bash
-python3 scripts/plot_results.py \
-    --history runs/segformer_b2_rgb/history.json \
-    --output runs/segformer_b2_rgb/training_curves.png
-```
-
----
-
-### Phase 4: Semantic Hazard Segmentation (UNet — ResNet-34 Encoder)
-
-The UNet pipeline uses `segmentation_models_pytorch` (SMP) with a ResNet-34 encoder. Scripts are in `scripts/unet/`. The dataset loader auto-detects `LunarSeg/` from the repo root, so no manual `--root` is needed if you run from the project directory.
+The UNet pipeline uses `segmentation_models_pytorch` (SMP) with a ResNet-34 encoder. Scripts are organized in `scripts/unet/`. The dataset loader auto-detects `LunarSeg/` from the repository root, so no manual `--root` is needed when executing from the project root.
 
 > **Dependencies:** `pip install segmentation-models-pytorch scipy opencv-python matplotlib`
 
@@ -404,6 +336,74 @@ python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
 
 ---
 
+### Phase 4: Semantic Hazard Segmentation (SegFormer)
+
+The Hugging Face pipeline in `scripts/segformer/train_segformer_hf.py` (or root forwarder `scripts/train_segformer_hf.py`) runs natively on modern PyTorch + `transformers`, operating completely offline (`HF_HUB_OFFLINE=1`).
+
+#### 1. RGB Mode Training (3 Input Channels)
+Fine-tunes `mit-b2` on 3-channel RGB imagery with cross-entropy loss, polynomial decay, and validation checkpoints:
+```bash
+python3 scripts/segformer/train_segformer_hf.py train \
+    --model SegFormer/mit-b2 \
+    --in-channels 3 \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
+    --out-dir runs/segformer_b2_rgb \
+    --epochs 30 --batch-size 4 --accum 4 \
+    --lr 6e-5 --height 480 --width 640
+```
+
+#### 2. Multi-Modal RGB-D Training (4 Input Channels)
+Expands the first patch-embedding layer to 4 channels ($3\text{ RGB} + 1\text{ Depth}$). Pretrained RGB weights are preserved, and new depth weights are initialized to zero (`--depth-init zero`):
+```bash
+python3 scripts/segformer/train_segformer_hf.py train \
+    --model SegFormer/mit-b2 \
+    --in-channels 4 \
+    --depth-dir "LunarSeg/depth/{split}" \
+    --label-mode color \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --out-dir runs/segformer_b2_rgbd \
+    --epochs 30 --batch-size 4 --accum 4
+```
+
+#### 3. Evaluation & Hazard Detection Analysis
+Evaluates the model on `test.txt`. In addition to standard pixel metrics (mIoU, precision, recall), it computes **hazard-level detection rates** categorized by physical pixel size/distance:
+- **Small (20–300 px):** Distant hazards
+- **Medium (300–3000 px):** Intermediate hazards
+- **Large (>3000 px):** Close hazards
+- **False Alarms per Image:** Predicted hazard clusters that overlap zero ground-truth pixels.
+
+```bash
+python3 scripts/segformer/train_segformer_hf.py eval \
+    --ckpt runs/segformer_b2_rgb/best \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
+    --split test \
+    --output-dir runs/segformer_b2_rgb/preds
+```
+*(Exports color-coded predicted masks `<name>_mask.png` and uint8 class ID arrays `<name>.npy` to `--output-dir`, automatically organized into split subdirectories like `<output-dir>/<split>/`).*
+
+#### 4. Robustness to Test-Time Environmental Corruptions
+Simulates lighting drops, sensor noise, and camera blur to evaluate out-of-distribution resilience:
+```bash
+python3 scripts/segformer/train_segformer_hf.py analyze \
+    --ckpt runs/segformer_b2_rgb/best \
+    --label-dir "LunarSeg/label_color/{split}" \
+    --label-mode color \
+    --split test \
+    --corruptions "darker:0.5,gamma:2.0,noise:25,blur:2"
+```
+
+#### 5. Plotting Training Curves
+Re-generates loss curves and IoU progressions from `history.json`:
+```bash
+python3 scripts/segformer/plot_results.py \
+    --history runs/segformer_b2_rgb/history.json \
+    --output runs/segformer_b2_rgb/training_curves.png
+```
+
+---
+
 ## 7. Summary Mapping of Custom Scripts vs. Submodules
 
 | Custom Script (`scripts/`) | Interacts With | Functionality | Primary Output |
@@ -412,8 +412,6 @@ python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
 | **`finetune_lunar.py`** | `Depth-Anything-V2`, `LunarSeg` | Fine-tune DAv2 metric head directly on LunarSeg | `best.pth`, `last.pth`, `config.json`, `.npy` |
 | **`inference_dav2.py`** | `Depth-Anything-V2` | Batch inference with fine-tuned DAv2 weights | Float32 `[0, 1]` `.npy` & 8-bit preview `.png` |
 | **`count_gflops.py`** | `Depth-Anything-V2` | Profiles GFLOPs, GMACs, latency, and throughput | Terminal benchmark breakdown |
-| **`train_segformer_hf.py`** | `SegFormer/mit-b2`, `LunarSeg` | SegFormer RGB/RGB-D fine-tuning, eval & corruptions | `best/`, `last/`, `history.json`, `_mask.png` |
-| **`plot_results.py`** | Training runs | Plots training/validation loss and per-class IoU | `training_curves.png` |
 | **`split_dataset.py`** | `LunarSeg` | Multipurpose dataset splitter (symlink/hardlink/copy/move) | `train/`, `validation/`, `test/` directories |
 | **`inspect_dataset.py`** | `LunarSeg` | Dataset diagnostic: class ID distributions & modality checks | Diagnostic report in terminal |
 | **`visualize_sample.py`** | `LunarSeg` | 4-panel multimodal visualization (RGB, ID, color, depth) | `results/dataset_sample.png` |
@@ -424,3 +422,5 @@ python3 scripts/unet/stress_unet.py --runs unet_r34_rgb unet_r34_rgbd \
 | **`unet/evaluate_unet.py`** | SMP, `LunarSeg` | UNet evaluation: mIoU, per-class metrics, visual comparisons | JSON metrics, comparison PNGs |
 | **`unet/compare_unet.py`** | SMP, `LunarSeg` | Multi-run side-by-side UNet comparison | Comparison table, overlay images |
 | **`unet/stress_unet.py`** | SMP | Inference latency benchmarking across UNet checkpoints | Throughput stats (ms/frame) |
+| **`segformer/train_segformer_hf.py`** | `SegFormer/mit-b2`, `LunarSeg` | SegFormer RGB/RGB-D fine-tuning, eval & corruptions | `best/`, `last/`, `history.json`, `_mask.png` |
+| **`segformer/plot_results.py`** | Training runs | Plots training/validation loss and per-class IoU | `training_curves.png` |
