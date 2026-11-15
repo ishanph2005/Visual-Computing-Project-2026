@@ -1030,7 +1030,10 @@ def _setup_eval(args):
         set_class_names(cfg["class_names"])  # names used when the model was trained
     ds = LunarSegDataset(args.image_dir, args.label_dir, args.split_dir, args.split, h, w, False,
                          args.depth_dir if in_ch == 4 else None, args.depth_ext or cfg.get("depth_ext") or "png")
-    colors = parse_colors(args.color_map) if args.color_map else cfg.get("colors")  # saved by train
+    if getattr(args, "label_mode", None) == "id":
+        colors = None
+    else:
+        colors = parse_colors(args.color_map) if args.color_map else cfg.get("colors")  # saved by train
     if colors:
         ds.cmap = ColorMap(colors)
     if args.max_samples:
@@ -1068,6 +1071,11 @@ def main():
                        help='Comma-separated names by class id, default "background,rock,crater" for 3 classes')
         p.add_argument("--image-dir", default="LunarSeg/image/{split}", help='RGB folder, e.g. "LunarSeg/image/{split}"')
         p.add_argument("--label-dir", default="LunarSeg/label_color/{split}", help='Label folder, e.g. "LunarSeg/label_color/{split}"')
+        p.add_argument("--label-mode", choices=["id", "color"], default="color",
+                       help="id: label PNGs hold class ids. color: label PNGs are colour-coded masks (default: color, matches label_color/ default)")
+        p.add_argument("--color-map", default=None,
+                       help='With --label-mode color: exact class colours "R,G,B;R,G,B;..." (id = position). '
+                            'Default: found automatically (black = class 0, others by pixel count)')
         p.add_argument("--split-dir", default=str(_default_split), help="Folder with train.txt / validation.txt / test.txt (default: LunarSeg)")
         p.add_argument("--height", type=int, default=None, help="Network input height (default 480)")
         p.add_argument("--width", type=int, default=None, help="Network input width (default 640)")
@@ -1105,11 +1113,6 @@ def main():
                         "zero = start exactly as the pretrained RGB model; mean = copy of the mean RGB weights")
     t.add_argument("--random-init", action="store_true", help="Do not load pretrained weights (smoke tests only)")
     t.add_argument("--num-classes", type=int, default=None)
-    t.add_argument("--label-mode", choices=["id", "color"], default="color",
-                   help="id: label PNGs hold class ids. color: label PNGs are colour-coded masks (default: color, matches label_color/ default)")
-    t.add_argument("--color-map", default=None,
-                   help='With --label-mode color: exact class colours "R,G,B;R,G,B;..." (id = position). '
-                        'Default: found automatically (black = class 0, others by pixel count)')
     t.add_argument("--out-dir", type=Path, default=Path("runs/segformer"))
     t.add_argument("--epochs", type=int, default=30)
     t.add_argument("--batch-size", type=int, default=4)
@@ -1129,8 +1132,6 @@ def main():
                    help="If set, save predicted masks here: <name>_mask.png (colour) and <name>.npy (class ids)")
     e.add_argument("--no-auto-split", action="store_true",
                    help="Save predictions directly in --output-dir without split subdirectory")
-    e.add_argument("--color-map", default=None,
-                   help='Colour labels only: override the colours saved by train, "R,G,B;R,G,B;..."')
     e.set_defaults(fn=cmd_eval)
 
     an = sub.add_parser("analyze", help="Decision-threshold sweep, robustness to RGB corruption, per-scenario IoU")
@@ -1138,7 +1139,6 @@ def main():
     an.add_argument("--ckpt", required=True, help="Saved model folder, e.g. runs/segformer_b2_rgb/best")
     an.add_argument("--split", default="test")
     an.add_argument("--output-dir", type=Path, default=None, help="Where to write the analysis files (default: next to the checkpoint)")
-    an.add_argument("--color-map", default=None, help='Colour labels only: override the colours saved by train')
     an.add_argument("--batch-size", type=int, default=4)
     an.add_argument("--thresholds", default="0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.05",
                     help="Thresholds t on P(rock)+P(crater) for the pixel-level sweep")

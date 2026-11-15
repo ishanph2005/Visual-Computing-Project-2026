@@ -114,21 +114,31 @@ Checkpoints must be placed in their expected paths before running inference or f
 
 | Model | Path | Source / Status |
 | :--- | :--- | :--- |
-| **Depth Anything V2 Large** | `Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth` | Hugging Face (335M params) |
-| **Depth Anything V2 Metric Hypersim** | `Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth` | Pre-downloaded (indoor metric) |
+| **Depth Anything V2 Large** | `Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth` | Hugging Face (335M params, relative depth) |
+| **Depth Anything V2 Small** | `Depth-Anything-V2/checkpoints/depth_anything_v2_vits.pth` | Hugging Face (25M params; used in fine-tuning commands) |
+| **Depth Anything V2 Metric Hypersim** | `Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth` | Hugging Face (335M params, indoor metric) |
 | **SegFormer MIT-B2** | `SegFormer/mit-b2/` | Hugging Face (`pytorch_model.bin`, `config.json`) |
 
 #### Download Depth Anything V2 Checkpoints
 ```bash
-# Download Depth Anything V2 Large (ViT-L, 335M params):
+# Create checkpoints directory
 mkdir -p Depth-Anything-V2/checkpoints
-wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
 
+# 1. Download Depth Anything V2 Large (ViT-L, 335M params):
+wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
 # Or using curl:
 curl -L -o Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Large/resolve/main/depth_anything_v2_vitl.pth
 
-# (Optional) For smaller GPUs (4–6 GB VRAM), download ViT-Small (ViT-S, 25M params):
+# 2. Download ViT-Small (ViT-S, 25M params - used in Section 6 fine-tuning):
 wget -P Depth-Anything-V2/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
+# Or using curl:
+curl -L -o Depth-Anything-V2/checkpoints/depth_anything_v2_vits.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Small/resolve/main/depth_anything_v2_vits.pth
+
+# 3. (Optional) Download Metric Hypersim ViT-L weights:
+mkdir -p Depth-Anything-V2/metric_depth/checkpoints
+wget -P Depth-Anything-V2/metric_depth/checkpoints/ https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/depth_anything_v2_metric_hypersim_vitl.pth
+# Or using curl:
+curl -L -o Depth-Anything-V2/metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth https://huggingface.co/depth-anything/Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/depth_anything_v2_metric_hypersim_vitl.pth
 ```
 
 #### Download SegFormer MIT-B2 Pretrained Weights
@@ -174,10 +184,10 @@ All commands below should be executed from the **repository root directory**.
 Partitions images and dataset files into `train/`, `validation/`, and `test/` subfolders according to `train.txt`, `test.txt`, and `validation.txt`:
 
 ```bash
-# Organize files into splits with selectable transfer mode:
+# Organize files into splits with selectable transfer mode (symlink, hardlink, copy, move):
 python3 scripts/split_dataset.py /path/to/downloaded_images \
     --output-dir LunarSeg/image \
-    --mode symlink  # options: symlink (default), hardlink, copy, move \
+    --mode symlink \
     --ext .png
 ```
 
@@ -204,12 +214,22 @@ python3 scripts/run_dav2_raw.py \
 #### 2. Fine-Tuning Depth Anything V2 on Lunar Ground-Truth Depth
 Adapts the metric DPT head (`sigmoid * max_depth` with `max_depth=1.0`) to predict normalized lunar depth $[0, 1]$ directly. Trains with L1 or SiLog loss, polynomial learning rate decay, and mixed precision:
 ```bash
+# Option A: Fine-tune ViT-Small (25M params, fits 4-6 GB GPUs):
 python3 scripts/finetune_lunar.py train \
     --encoder vits \
     --pretrained Depth-Anything-V2/checkpoints/depth_anything_v2_vits.pth \
     --out-dir runs/dav2_lunar_vits \
     --epochs 20 --batch-size 2 --accum 8 \
     --lr 5e-6 --loss l1 --select all
+
+# Option B: Fine-tune ViT-Large (335M params, add --freeze-encoder for memory efficiency):
+# python3 scripts/finetune_lunar.py train \
+#     --encoder vitl \
+#     --pretrained Depth-Anything-V2/checkpoints/depth_anything_v2_vitl.pth \
+#     --out-dir runs/dav2_lunar_vitl \
+#     --freeze-encoder \
+#     --epochs 20 --batch-size 1 --accum 16 \
+#     --lr 5e-6 --loss l1 --select all
 ```
 *Tips: Add `--freeze-encoder` if GPU memory is constrained. Use `--select terrain` to select `best.pth` based on non-sky terrain AbsRel.*
 
