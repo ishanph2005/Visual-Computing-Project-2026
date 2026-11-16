@@ -62,3 +62,7 @@ Thumbs.db
 # Depth model results and finetuned outputs (large generated files)
 depthmodel_results/
 finetuned/
+
+# Downloaded archives
+*.zip
+*.safetensors
